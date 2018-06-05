@@ -22,12 +22,16 @@ public class SubsurfaceScatterPostProcess : MonoBehaviour {
 
 	void OnEnable() {
         renderCamera = GetComponent<Camera>();
-        material = new Material(Shader.Find("Post/SeparableSubsurfaceScatter"));
+        material = new Material(Shader.Find("PostProcess/SeparableSubsurfaceScatter"));
 
         buffer = new CommandBuffer();
         buffer.name = "Separable Subsurface Scatter";
         renderCamera.clearStencilAfterLightingPass = true;
         renderCamera.AddCommandBuffer(CameraEvent.AfterForwardOpaque, buffer);
+    }
+
+    void  OnDisable() {
+        ClearBuffer();
     }
 
     void OnPreRender() {
@@ -40,5 +44,19 @@ public class SubsurfaceScatterPostProcess : MonoBehaviour {
         Vector3 SSSC = Vector3.Normalize(new Vector3(MainColor.r, MainColor.g, MainColor.b));
         Vector3 SSSFC = Vector3.Normalize(new Vector3(Falloff.r, Falloff.g, Falloff.b));
         KernelCalculate.CalculateKernel(KernelArray, 25, SSSC, SSSFC);
+        material.SetVectorArray(Kernel, KernelArray);
+        material.SetFloat(SSSScaler, Scaler);
+
+        buffer.Clear();
+        buffer.GetTemporaryRT(SceneColorID, renderCamera.pixelWidth, renderCamera.pixelHeight, 0, FilterMode.Trilinear, RenderTextureFormat.DefaultHDR);
+        buffer.BlitStencil(BuiltinRenderTextureType.CameraTarget, SceneColorID, BuiltinRenderTextureType.CameraTarget, material, 0);
+        buffer.BlitSRT(SceneColorID, BuiltinRenderTextureType.CameraTarget, material, 1);
+    }
+
+    void ClearBuffer() {
+        buffer.ReleaseTemporaryRT(SceneColorID);
+        renderCamera.RemoveCommandBuffer(CameraEvent.AfterForwardOpaque, buffer);
+        buffer.Release();
+        buffer.Dispose();
     }
 }
