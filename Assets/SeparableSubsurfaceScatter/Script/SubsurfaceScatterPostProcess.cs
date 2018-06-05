@@ -22,6 +22,7 @@ public class SubsurfaceScatterPostProcess : MonoBehaviour {
 
 	void OnEnable() {
         renderCamera = GetComponent<Camera>();
+        renderCamera.depthTextureMode |= DepthTextureMode.Depth;
         material = new Material(Shader.Find("PostProcess/SeparableSubsurfaceScatter"));
 
         buffer = new CommandBuffer();
